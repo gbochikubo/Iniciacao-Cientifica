@@ -12,19 +12,35 @@ def formataFrase(lista):
     simbolos_especiais = ['.', ',', ':', ';', '?', '!', '...']
     frase = ""  
     tamanho = len(lista)
-
     atual = 0
-
     while atual < tamanho:
         elemento = lista[atual]
+        #if(elemento != '\n'):
         if elemento in simbolos_especiais or atual == 0:
             frase += elemento
         else:
             frase += " " + elemento
 
         atual = atual + 1
-    
+    #frase += "\"" + frase + "\""    
     return frase
+
+def formataPos(lista):
+    frase =""  
+    tamanho = len(lista)
+    
+    pos=[]
+    atual = 0
+
+    while atual < tamanho:
+        elemento = lista[atual]
+        frase += "" + "\""+elemento+"\""
+        pos.append(frase)
+        atual = atual + 1
+        frase=""
+    
+    return pos
+
 
 #arquivo Sentancas
 annotationSentencas = []
@@ -76,26 +92,28 @@ while(i<210):
     j=0
     i = i +1
 
-
+'''
 print(formataFrase(sentence_annotation[0]))
-
+print(formataPos(pos_annotation[0]))
+'''
 TRAIN_DATA = []
 
 atual = 0
 while atual < len(sentence_annotation):
-    elemento = (formataFrase(sentence_annotation[atual]), {"tags": pos_annotation[atual]})
+    elemento = (formataFrase(sentence_annotation[atual]), {"tags": formataPos(pos_annotation[atual])})
     TRAIN_DATA.append(elemento)
 
     atual = atual + 1
 
-#print(TRAIN_DATA)
+print(TRAIN_DATA)
 
-# Treinando
+#Treinando
 optimizer = nlp.begin_training()
 for i in range(20):
     random.shuffle(TRAIN_DATA)
     for text, annotations in TRAIN_DATA:
-        #print("TEXT : ", len(text))
-        #print("ANNOTATIONS : ", len(annotations))
-        #print(annotations)
+        print(text)
+        print(len(text))
+        print(annotations)
+        print(len(annotations))
         nlp.update([text], [annotations], sgd=optimizer)
