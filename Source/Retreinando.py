@@ -7,113 +7,48 @@ from spacy.util import minibatch, compounding
 import csv
 from spacy.symbols import ADJ, ADV, INTJ, NOUN, PROPN, VERB, ADP, AUX, CCONJ,DET, NUM, PRON, SCONJ, PUNCT, SYM, X
 
-#Função responsável por formatar as frases retiradas do arquivo csv
-def formataFrase(lista):
-    simbolos_especiais = ['.', ',', ':', ';', '?', '!', '...']
-    frase = ""  
-    tamanho = len(lista)
-    atual = 0
-    while atual < tamanho:
-        elemento = lista[atual]
-        #if(elemento != '\n'):
-        if elemento in simbolos_especiais or atual == 0:
-            frase += elemento
-        else:
-            frase += " " + elemento
-
-        atual = atual + 1
-    #frase += "\"" + frase + "\""    
-    return frase
-
-def formataPos(lista):
-    frase =""  
-    tamanho = len(lista)
-    
-    pos=[]
-    atual = 0
-
-    while atual < tamanho:
-        elemento = lista[atual]
-        frase += "" + "\""+elemento+"\""
-        pos.append(frase)
-        atual = atual + 1
-        frase=""
-    
-    return pos
-
-
-#arquivo Sentancas
-annotationSentencas = []
-#arquivo teste
-annotationTeste =[]
-#sentencas
-sentence_annotation = []
-#pos 
-pos_annotation = []
+TRAIN_DATA = []
 nlp = spacy.load('pt_core_news_sm')
 
-#Lendo as sentencas do arquivo Sentencas.csv
-with open('../Docs/Sentencas.csv','r', encoding='utf8') as sentencas:
-    reader = sentencas.readlines()
-    for line in reader:
-        annotationSentencas.append(line.split('***'))
+with open('../Docs/Sentencas.csv', 'r',encoding='utf8') as data_file:
+    lines = data_file.readlines()
+    i = 0
+    while i < (len(lines)-1):
+        tokens = lines[i].split("***")
+        i += 1
+        tags = lines[i].split("***")
+        i += 1
+        TRAIN_DATA.append(("{}".format(' '.join(tokens[:-1])), {"tags": tags[:-1]}))
 
-sentencas.close()
+TRAIN_DATA[:2]
+random.shuffle(TRAIN_DATA)
+print(len(TRAIN_DATA))
+TEST_DATA = TRAIN_DATA[:43]
+TRAIN_DATA = TRAIN_DATA[43:]
 
-#Lendo a pos corrigida das sentencas do arquivo posAnnotations.csv
-with open('../Docs/posAnnotations.csv','r',encoding='utf8') as pos:
-    reader = pos.readlines()
-    for line in reader:
-        annotationTeste.append(line.split(','))
-
-
-#Adicionando somente as sentencas a lista annotationSentencas
-contador = 0
-while(contador<837):
-    sentence_annotation.append(annotationSentencas[contador])
-    contador = contador+4
-
-#Adicionando somente a pos na lista pos_annotation
-contador = 0
-while(contador<=419):
-    if(contador%2 == 1):
-        pos_annotation.append(annotationTeste[contador])
-    contador = contador+1
-
-#Removendo os espaços em branco do final de cada pos annotation
-i = 0
-j = 0
-while(i<210):
-    while(j<28):
-        if(pos_annotation[i][j]==''):
-            del pos_annotation[i][j-1:28]
-            j=28
-        j = j + 1   
-    j=0
-    i = i +1
-
-'''
-print(formataFrase(sentence_annotation[0]))
-print(formataPos(pos_annotation[0]))
-'''
-TRAIN_DATA = []
-
-atual = 0
-while atual < len(sentence_annotation):
-    elemento = (formataFrase(sentence_annotation[atual]), {"tags": formataPos(pos_annotation[atual])})
-    TRAIN_DATA.append(elemento)
-
-    atual = atual + 1
-
-print(TRAIN_DATA)
-
-#Treinando
 optimizer = nlp.begin_training()
 for i in range(20):
+    print("Epoch ", i)
     random.shuffle(TRAIN_DATA)
     for text, annotations in TRAIN_DATA:
-        print(text)
-        print(len(text))
-        print(annotations)
-        print(len(annotations))
-        nlp.update([text], [annotations], sgd=optimizer)
+        try:
+            nlp.update([text], [annotations], sgd=optimizer)
+        except:
+            print("Error on ", text, annotations)
+
+
+nlp.to_disk('new_model')
+
+tags_hits = 0
+total_tags = 0
+
+for text, reference in TEST_DATA:
+    res = nlp(text)
+    i = 0
+    for token in res:
+        if token.pos_ == reference['tags'][i]:
+            tags_hits += 1
+        i += 1
+        total_tags += 1
+
+print("{} correct tags out of {}".format(tags_hits, total_tags))
